@@ -1,0 +1,186 @@
+import javax.swing.*;
+import java.awt.*;
+import java.util.Timer;
+import java.util.TimerTask;
+
+public class NumberGuessGame extends JFrame {
+    private int numberToGuess;
+    private int guessCount;
+    private int maxNumber;
+    private int bestScore = Integer.MAX_VALUE;
+
+    private JTextField guessField;
+    private JLabel feedbackLabel, countLabel, rangeLabel, bestLabel, timerLabel;
+    private JComboBox<String> difficultyBox;
+    private Timer gameTimer;
+    private int timeElapsed = 0;
+
+    public NumberGuessGame() {
+        setTitle("Number Guessing Game");
+        setSize(600, 400);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        getContentPane().setBackground(new Color(245, 245, 245));
+
+        // Top panel
+        JPanel topPanel = new JPanel(new GridLayout(3, 1));
+        topPanel.setBackground(new Color(245, 245, 245));
+
+        JLabel title = new JLabel("Guess the Number Game", JLabel.CENTER);
+        title.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        title.setForeground(new Color(33, 33, 33));
+        topPanel.add(title);
+
+        JPanel difficultyPanel = new JPanel();
+        difficultyPanel.setBackground(new Color(245, 245, 245));
+        difficultyPanel.add(new JLabel("Difficulty:"));
+        String[] levels = {"Easy (1-50)", "Medium (1-100)", "Hard (1-500)"};
+        difficultyBox = new JComboBox<>(levels);
+        difficultyBox.setSelectedIndex(1);
+        difficultyPanel.add(difficultyBox);
+        topPanel.add(difficultyPanel);
+        
+        add(topPanel, BorderLayout.NORTH);
+
+        // Center panel
+        JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        centerPanel.setBackground(new Color(245, 245, 245));
+
+        rangeLabel = new JLabel("Enter a number between 1 and 100:");
+        guessField = new JTextField(10);
+
+        JButton guessButton = createStyledButton("Guess");
+        JButton hintButton = createStyledButton("Hint");
+
+        centerPanel.add(rangeLabel);
+        centerPanel.add(guessField);
+        centerPanel.add(guessButton);
+        centerPanel.add(hintButton);
+        add(centerPanel, BorderLayout.CENTER);
+
+        // the Bottom panel
+        JPanel bottomPanel = new JPanel(new GridLayout(4, 1));
+        bottomPanel.setBackground(new Color(245, 245, 245));
+
+        feedbackLabel = new JLabel("Start guessing...", JLabel.CENTER);
+        feedbackLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        feedbackLabel.setForeground(new Color(34, 87, 122));
+
+        countLabel = new JLabel("Guesses: 0", JLabel.CENTER);
+        timerLabel = new JLabel("Time: 0 sec", JLabel.CENTER);
+
+        JButton resetButton = createStyledButton("Reset Game");
+
+        bottomPanel.add(feedbackLabel);
+        bottomPanel.add(countLabel);
+        bottomPanel.add(timerLabel);
+        bottomPanel.add(resetButton);
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        //the  Action listeners
+        guessButton.addActionListener(e -> checkGuess());
+        resetButton.addActionListener(e -> resetGame());
+        difficultyBox.addActionListener(e -> resetGame());
+        hintButton.addActionListener(e -> showHint());
+
+        resetGame();
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setBackground(new Color(51, 153, 255));
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(30, 136, 229));
+            }
+
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(51, 153, 255));
+            }
+        });
+
+        return button;
+    }
+
+    private void resetGame() {
+        String difficulty = (String) difficultyBox.getSelectedItem();
+        if (difficulty.contains("50")) maxNumber = 50;
+        else if (difficulty.contains("500")) maxNumber = 500;
+        else maxNumber = 100;
+
+        numberToGuess = 1 + (int)(Math.random() * maxNumber);
+        guessCount = 0;
+        timeElapsed = 0;
+
+        rangeLabel.setText("Enter a number between 1 and " + maxNumber + ":");
+        feedbackLabel.setText("New game started. Make your guess.");
+        countLabel.setText("Guesses: 0");
+        timerLabel.setText("Time: 0 sec");
+        guessField.setText("");
+
+        if (gameTimer != null) gameTimer.cancel();
+        gameTimer = new Timer();
+        gameTimer.scheduleAtFixedRate(new TimerTask() {
+            public void run() {
+                timeElapsed++;
+                SwingUtilities.invokeLater(() -> timerLabel.setText("Time: " + timeElapsed + " sec"));
+            }
+        }, 1000, 1000);
+    }
+//exception handling
+    private void checkGuess() {
+        try {
+            int guess = Integer.parseInt(guessField.getText().trim());
+            guessCount++;
+
+            if (guess < 1 || guess > maxNumber) {
+                feedbackLabel.setText("Out of range! Enter a number between 1 and " + maxNumber);
+            } else if (guess < numberToGuess) {
+                feedbackLabel.setText("Too low! Try a higher number.");
+            } else if (guess > numberToGuess) {
+                feedbackLabel.setText("Too high! Try a lower number.");
+            } else {
+                feedbackLabel.setText("Correct! You guessed it.");
+                countLabel.setText("Guesses: " + guessCount);
+                gameTimer.cancel();
+
+                if (guessCount < bestScore) {
+                    bestScore = guessCount;
+                    bestLabel.setText("Best Score: " + bestScore + " guesses");
+                }
+
+                JOptionPane.showMessageDialog(this,
+                        "You won in " + guessCount + " guesses!\nTime taken: " + timeElapsed + " seconds.",
+                        "Victory!", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            countLabel.setText("Guesses: " + guessCount);
+        } catch (NumberFormatException ex) {
+            feedbackLabel.setText("Invalid input! Please enter a number.");
+        }
+
+        guessField.setText("");
+    }
+
+    private void showHint() {
+        int range = 5 + maxNumber / 10;
+        int low = Math.max(1, numberToGuess - range);
+        int high = Math.min(maxNumber, numberToGuess + range);
+        feedbackLabel.setText("Hint: It's between " + low + " and " + high);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            new NumberGuessGame().setVisible(true);
+        });
+    }
+}
